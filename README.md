@@ -26,7 +26,7 @@
 
 该例子位于 [example](example/) 目录
 
-```json
+```js
 // 第一步：创建配置对象
 let config = {
   request: "http://www.weather.com.cn/weather1d/101010100.shtml",
@@ -91,9 +91,9 @@ example 目录中有简单的例子，`src/LittleCrawler.test.js` 文件中有�
 
 ```json
 {
-  request: "http://www.weather.com.cn/weather1d/101010100.shtml",
-  response: {
-    city: "body > div.con.today.clearfix > div.left.fl > div.ctop.clearfix > div.crumbs.fl > a"
+  "request": "http://www.weather.com.cn/weather1d/101010100.shtml",
+  "response": {
+    "city": "body > div.con.today.clearfix > div.left.fl > div.ctop.clearfix > div.crumbs.fl > a"
   }
 }
 ```
@@ -127,7 +127,7 @@ get() 方法用于根据配置对象从网页中获取信息：
 ```js
 lc.get(config)
 	.then(result => {
-      
+
 	});
 ```
 
@@ -267,7 +267,7 @@ lc.get(config, {def: 4}) // 第二个参数给配置对象的 valid 操作提供
 
 type 属性设置为 array，则结果就是一个数组，可以使用 element 属性来指定 HTML 数组元素，并使用 children 来指定每个孩子的属性。
 
-比如： 
+比如：
 
 ```json
 "response": {
@@ -316,7 +316,7 @@ array 类型支持的操作：
     "children": {
       "name": ".bookname",
       "author": ".bookauthor"
-    }
+    },
     "valideach": "!{author}.match('张三')"
   }
   ```
@@ -408,7 +408,7 @@ array 类型支持的操作：
   缺省会删除所有的匹配并忽略大小写。不过可以将 remove 设置为对象来指定选项：
 
   ```json
-  "remove": { 
+  "remove": {
     "regexp": "\\d+",
     "options" "i"
   }
