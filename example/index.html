@@ -1,0 +1,25 @@
+﻿<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LittleCrawler.js Examples</title>
+  <script src="../src/LittleCrawler.js"></script>
+  <script src="example.js"></script>
+</head>
+<body>
+  <h1>注意</h1>
+  <ul>
+    <li>本页面如果在浏览器中打开的话，需要浏览器<b>禁用安全选项</b>，比如 Cherome 使用 <code>chrome.exe --args --disable-web-security --user-data-dir=D:\tmp</code>；</li>
+    <li>本页面如果在 Cordova 中打开的话，请确保 config.xml 中设置了<code>&lt;access origin="*" /&gt;</code>；</li>
+    <li>本模块使用了 ECMAScript 6 语法，如果要兼容 ES5 请自行转换代码和使用垫片；</li>
+  </ul>
+
+  <h1>获取<span id="city"></span>当天的天气</h1>
+  <h2>白天</h2>
+  <p>温度：<span id="day.temp"></span></p>
+  <p>天气：<span id="day.weather"></span></p>
+  <h2>夜间</h2>
+  <p>温度：<span id="night.temp"></span></p>
+  <p>天气：<span id="night.weather"></span></p>
+  <div id="life"></div>
+</body>
+</html>
