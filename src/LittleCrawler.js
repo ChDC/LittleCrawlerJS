@@ -102,8 +102,9 @@
 
       // 为了防止浏览器自动获取资源而进行的属性转换列表
       this.insecurityAttributeList = ['src'];
-      this.insecurityTagList = ['body', 'head', 'title', 'script', 'style', 'link', 'meta', 'iframe'];
-      this.singleTagList = ['meta', 'link']; // 用于转换单标签
+      this.insecurityTagList = ['body', 'head', 'title',  'link', 'meta', 'iframe']; //'style',
+      this.abnormalSingleTagList = ['meta']; // 用于转换单标签
+      this.normalSingleTagList = ['link']; // 用于转换单标签
 
       this.fixurlAttributeList = ['href', "lc-src"]; // 需要修复 url 的属性
 
@@ -134,6 +135,9 @@
       let method = (request.method || "GET").toLowerCase();
       let type = (request.type || "HTML").toLowerCase();
       let headers = request.headers || {};
+      let params = request.params || {};
+      for(let k in params)
+        params[k] = LittleCrawler.format(params[k], dict);
 
       // 获取 ajax 操作对象
       let ajax;
@@ -163,7 +167,7 @@
       }
 
       // 发出请求并解析响应
-      return ajax(method, url, request.params, undefined, headers,
+      return ajax(method, url, params, undefined, headers,
                   {timeout: request.timeout})
         .then(data => this.parse(data, type, response, url, dict));
     }
@@ -283,6 +287,8 @@
               const validCode = '"use strict"\n' + LittleCrawler.format(response.valideach, gatherDict, true);
               return eval(validCode);
             });
+          if(response.reverse)
+            result = result.reverse();
         }
         break;
         case "object": {
@@ -319,6 +325,7 @@
           if(result == undefined) return result;
           // [operator] 指定 remove 操作来删除一些值
           if(response.remove){
+            result = result.toString();
             switch(LittleCrawler.type(response.remove)){
               case "array":
                 result = response.remove.reduce((r, e) =>
@@ -340,6 +347,7 @@
 
           // [operator] 使用 extract 操作提取最终结果
           if(response.extract){
+            result = result.toString();
             let doExtract = (regex, str) => {
               let matcher = str.match(regex);
               if(!matcher) return undefined;
@@ -368,6 +376,9 @@
                 break;
             }
           }
+          if(result == undefined) return result;
+          if(typeof(result) == "string")
+            result = result.trim();
         }
         break;
         case "boolean": {
@@ -444,8 +455,8 @@
           }
         }
         if(!matched)
-          result = element.textContent.trim();
-        return result;
+          result = element.textContent;
+        return result.trim();
       }
       else{
         // json
@@ -497,10 +508,20 @@
     __transformHTML(html){
       if(!html) return html;
       // 将 meta link img 等无结束标签变成单结束标签
-      html = this.singleTagList.reduce((h, tag) =>
+      let singleTagList = [...this.abnormalSingleTagList, ...this.normalSingleTagList];
+      html = singleTagList.reduce((h, tag) =>
         h.replace(new RegExp(`(<${tag}\\b(?: [^>]*?)?)/?>`, "gi"), `$1></${tag}>`), html);
 
+      // 将 script 标签的 type 修改
+      html = html.replace(/<script\b([^>]*)/gi, (p0, p1) =>
+        `<script type="text/plain"${p1 ? p1.replace(/\btype\b/gi, 'lc-type') : ""}`);
+
+      // 将 style 标签文本化
+      html = html.replace(/<style\b(.*?)<\/style>/gi, '<script type="text/style"$1</script>');
+
       html = this.insecurityTagList.reduce((h, tag) => LittleCrawler.replaceTag(h, tag, `lc-${tag}`), html);
+
+
 
       // 图片的 src 属性转换成 lc-src 属性
       html = this.insecurityAttributeList.reduce((h, attr) => LittleCrawler.replaceAttribute(h, attr, `lc-${attr}`), html);
@@ -510,10 +531,24 @@
     // 将之前的转换逆转回来
     __reverseHTML(html){
       if(!html) return html;
-      html = this.insecurityTagList.reduce((h, tag) => LittleCrawler.replaceTag(h, `lc-${tag}`, tag), html);
 
       // 图片的 src 属性转换成 lc-src 属性
       html = this.insecurityAttributeList.reduce((h, attr) => LittleCrawler.replaceAttribute(h, `lc-${attr}`, attr), html);
+
+      html = this.insecurityTagList.reduce((h, tag) => LittleCrawler.replaceTag(h, `lc-${tag}`, tag), html);
+
+      // 将 script 标签的转换回来
+      html = html.replace(/<script type="text\/plain"([^>]*)/gi, (p0, p1) =>
+        `<script${p1 ? p1.replace(/\blc-type\b/gi, 'type') : ""}`);
+
+      // 将文本化的 style 标签转换回来
+      html = html.replace(/<script\b([^>]*) type="text\/style"(.*?)<\/script>/gi, '<style$1$2</style>');
+
+      html = this.abnormalSingleTagList.reduce((h, tag) =>
+        h.replace(new RegExp(`<${tag}\\b([^>]*)><\\/${tag}>`, "gi"), `<${tag}$1>`), html);
+
+      html = this.normalSingleTagList.reduce((h, tag) =>
+        h.replace(new RegExp(`<${tag}\\b([^>]*)><\\/${tag}>`, "gi"), `<${tag}$1/>`), html);
       return html;
     }
 
@@ -591,7 +626,19 @@
 
     return new Promise((resolve, reject) => {
       if(!url) return reject(new Error("url is null"));
-      url = LittleCrawler.__urlJoin(url, params);
+
+      method = method.toLowerCase();
+
+      let sendData = null;
+      switch(method){
+        case "get":
+          url = LittleCrawler.__urlJoin(url, params);
+          break;
+        case "post":
+          sendData = Object.keys(params).map(k => `${k}=${params[k]}`).join("&");;
+          break;
+      }
+
       console.log(`Get: ${url}`);
       url = encodeURI(url);
       retry = retry || 0;
@@ -646,7 +693,7 @@
         reject(new Error("AjaxError: Request Error"));
       }
 
-      request.send(null);
+      request.send(sendData);
     });
   },
 
